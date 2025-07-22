@@ -1,8 +1,26 @@
-Tech Stack: React, NodeJS, MySQL
-Make sure you have MySQL server up and running.
-The database is set up beforehand:
+# Store Rating System - Backend Database Setup
 
--- Create Users table (handles all user types)
+## Tech Stack
+
+- **Frontend:** React  
+- **Backend:** Node.js  
+- **Database:** MySQL  
+
+## Prerequisites
+
+- Ensure that **MySQL server** is up and running.
+- The following database schema assumes the database is already created (e.g., `store_reviews_database`).
+- The schema supports multiple user types, store records, and a rating system with statistical views for reporting.
+
+---
+
+## 📦 Database Schema
+
+### 1. Users Table
+
+Handles all types of users: system admins, store owners, and normal users.
+
+```sql
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -13,77 +31,8 @@ CREATE TABLE users (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     INDEX idx_users_email (email),
     INDEX idx_users_role (role),
     INDEX idx_users_name (name)
 );
-
--- Create Stores table
-CREATE TABLE stores (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    address TEXT NOT NULL,
-    owner_id INT NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_stores_name (name),
-    INDEX idx_stores_email (email),
-    INDEX idx_stores_owner (owner_id)
-);
-
--- Create Ratings table
-CREATE TABLE ratings (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    store_id INT NOT NULL,
-    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    comment TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_user_store_rating (user_id, store_id),
-    INDEX idx_ratings_store (store_id),
-    INDEX idx_ratings_user (user_id),
-    INDEX idx_ratings_rating (rating)
-);
-
--- Create a view for store statistics
-drop view store_stats;
-CREATE VIEW store_stats AS
-SELECT 
-    s.id,
-    s.name,
-    s.email,
-    s.address,
-    s.owner_id,
-    s.is_active,
-    COALESCE(AVG(r.rating), 0) as average_rating,
-    COUNT(r.id) as total_ratings,
-    s.created_at,
-    s.updated_at
-FROM stores s
-LEFT JOIN ratings r ON s.id = r.store_id
-GROUP BY s.id, s.name, s.email, s.address, s.owner_id, s.is_active, s.created_at, s.updated_at;
-
--- Create a view for dashboard statistics
-CREATE VIEW dashboard_stats AS
-SELECT 
-    (SELECT COUNT(*) FROM users WHERE role = 'normal_user') as total_normal_users,
-    (SELECT COUNT(*) FROM users WHERE role = 'store_owner') as total_store_owners,
-    (SELECT COUNT(*) FROM users WHERE role = 'system_admin') as total_admin_users,
-    (SELECT COUNT(*) FROM users) as total_users,
-    (SELECT COUNT(*) FROM stores WHERE is_active = TRUE) as total_active_stores,
-    (SELECT COUNT(*) FROM stores) as total_stores,
-    (SELECT COUNT(*) FROM ratings) as total_ratings;
-
-    
--- Insert System Administrator
-INSERT INTO users (name, email, password, address, role) VALUES 
-('System Admin', 'admin@system.com', '$2b$10$hashedpassword1', '123 Admin Street, City, State', 'system_admin');
