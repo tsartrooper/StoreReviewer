@@ -9,7 +9,6 @@
 ## Prerequisites
 
 - Ensure that **MySQL server** is up and running.
-- The following database schema assumes the database is already created (e.g., `store_reviews_database`).
 - The schema supports multiple user types, store records, and a rating system with statistical views for reporting.
 
 ---
